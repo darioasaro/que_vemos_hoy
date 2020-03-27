@@ -36,6 +36,7 @@
                 var self = this;
                 $.getJSON(server + "/peliculas/" + id,
                     function(data) {
+                        console.log(data)
                         self.cargarDetalle(data);
                         //en el caso de que no se encuentre la pelicula, redirigir a la pagina de error
                     }).fail(function() {
