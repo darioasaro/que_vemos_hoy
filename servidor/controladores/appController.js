@@ -55,7 +55,6 @@ exports.movies = (req, res) => {
 
   //se genera la query para obtener el total de registros solicitados
   sqlCount += filter;
-  
 
   //Se toma la cantiad de resultados solicitados de acuerdo a que pagina es requerida
   if (cantidad) {
@@ -66,18 +65,20 @@ exports.movies = (req, res) => {
   }
 
   //---------Llamadas a la BD
-  
+
   //Consulta que retorna la cantidad total de registros obtenidos
   database.query(sqlCount, (err, rows) => {
-    if (err)throw err //res.status(500).send("Internal Server Error");
+    if (err) throw err;
+    //res.status(500).send("Internal Server Error");
     else {
       total = rows[0].total;
     }
   });
   //Consulta que retorna los registros a enviar con la cantidad solicitada y su offset correspondiente
   database.query(sql, (err, rows) => {
-    if (err) {res.status(500).send("Internal Server Error");}
-    else {
+    if (err) {
+      res.status(500).send("Internal Server Error");
+    } else {
       res.json({ result: "ok", peliculas: rows, total: total });
     }
   });
@@ -95,10 +96,10 @@ exports.generos = (req, res) => {
 //Metodo para retornar los datos de la pelicula y sus actores
 
 exports.getMovie = (req, res) => {
-  const id = req.params.id
-  console.log(id)
- if(id){
-  database.query(
+  const id = req.params.id;
+  console.log(id);
+  if (id) {
+    database.query(
       `SELECT p.titulo,p.duracion,p.director,p.anio,
       p.fecha_lanzamiento,p.puntuacion,p.poster,p.trama,g.nombre AS genero,a.nombre AS actor FROM pelicula AS p
       INNER JOIN genero AS g ON p.genero_id = g.id
@@ -107,29 +108,60 @@ exports.getMovie = (req, res) => {
       WHERE p.id = ? `,
       [id],
       (err, rows) => {
-        if(err)res.status(500).send("Internal Server Error")
-        else{
-           const peli = {
-                titulo : rows[0].titulo,
-                duracion : rows[0].duracion,
-                director : rows[0].director,
-                anio: rows[0].anio,
-                fecha_lanzamiento : rows[0].fecha_lanzamiento,
-                puntuacion : rows[0].puntuacion,
-                poster : rows[0].poster,
-                trama : rows[0].trama,
-                nombre : rows[0].genero
-            }
-            const actores = []
-          rows.map(registros=>actores.push({nombre:registros.actor}))
-          res.json({pelicula:peli,actores:actores})
+        if (err) res.status(500).send("Internal Server Error");
+        else {
+          const peli = {
+            titulo: rows[0].titulo,
+            duracion: rows[0].duracion,
+            director: rows[0].director,
+            anio: rows[0].anio,
+            fecha_lanzamiento: rows[0].fecha_lanzamiento,
+            puntuacion: rows[0].puntuacion,
+            poster: rows[0].poster,
+            trama: rows[0].trama,
+            nombre: rows[0].genero
+          };
+          const actores = [];
+          rows.map(registros => actores.push({ nombre: registros.actor }));
+          res.json({ pelicula: peli, actores: actores });
         }
       }
     );
- }
- else{
+  } else {
+    res.send("Bad request");
+  }
+};
+//Metodo para retornar las peliculas recomendadas, con parametros que se reciben por query
+exports.recommended = (req, res) => {
+  const puntuacion = req.query.puntuacion;
+  const genre = req.query.genero;
+  const anio_inicio = req.query.anio_inicio;
+  const anio_fin = req.query.anio_fin;
+  var baseSql = `SELECT p.id,p.poster,p.trama,p.titulo,p.anio,g.nombre AS nombre 
+                     FROM pelicula AS p 
+                     INNER JOIN genero AS g ON p.genero_id = g.id`;
+  const queryParams = [];
+  
+  if (genre) {
+    queryParams.push(`g.nombre LIKE '%${genre}%' `);
+  }
+  if (puntuacion) {
+    queryParams.push("p.puntuacion = " + puntuacion);
+  }
+  if (anio_inicio) {
+    queryParams.push(" p.anio BETWEEN " + anio_inicio + " AND " + anio_fin);
+  }
 
-   res.send("Bad request")
- }
-
+  if (queryParams.length > 0) {
+    baseSql += " WHERE " + queryParams.pop();
+    if (queryParams.length > 0) {
+      queryParams.map(filter => (baseSql += " AND " + filter));
+    }
+  }
+  database.query(baseSql, (err, rows) => {
+    if (err) res.status(500).send("Internal Server Error");
+    else {
+      res.json({ peliculas: rows });
+    }
+  });
 };
