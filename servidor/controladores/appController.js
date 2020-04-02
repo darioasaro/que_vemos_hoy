@@ -8,7 +8,8 @@ exports.getMovies = (req, res) => {
   let offset = 0; //OFFSET para la paginacion
   let filter = " "; //Filtro de peliculas
   let order = " "; //Orden que requiere el user
-  let queryParameters = []; //Contenedor de los parametros que llevara la query
+  const queryParameters = []; //Contenedor de los parametros que llevara la query
+  const queryData = []; // Contenedor de Datos para las query
   const {
     pagina,
     titulo,
@@ -21,13 +22,16 @@ exports.getMovies = (req, res) => {
 
   //de acuerdo a los filtros pasados por request se genera parte de la query
   if (anio) {
-    queryParameters.push("anio = " + anio);
+    queryParameters.push("anio = ?" );
+    queryData.push(anio)
   }
   if (titulo) {
-    queryParameters.push("titulo LIKE " + `'%${titulo}%'`);
+    queryParameters.push("titulo LIKE ? ");
+    queryData.push( `%${titulo}%`)
   }
   if (genero) {
-    queryParameters.push("genero_id = " + genero);
+    queryParameters.push("genero_id = ? ");
+    queryData.push(genero)
   }
   if (queryParameters.length > 0) {
     filter += ` WHERE ${queryParameters.shift()}`;
@@ -65,15 +69,16 @@ exports.getMovies = (req, res) => {
   }
 
   //---------Llamadas a la BD
-
+  console.log("baseSql",sql)
+  console.log("queryData",queryData)
   //Consulta que retorna la cantidad total de registros obtenidos
-  database.query(sqlCount, (err, rows) => {
+  database.query(sqlCount,queryData, (err, rows) => {
     if (err) throw err;
     //res.status(500).send("Internal Server Error");
     else {
       total = rows[0].total;
       //Consulta que retorna los registros a enviar con la cantidad solicitada y su offset correspondiente
-      database.query(sql, (err, rows) => {
+      database.query(sql,queryData, (err, rows) => {
         if (err) {
           res.status(500).send("Internal Server Error");
         } else {
