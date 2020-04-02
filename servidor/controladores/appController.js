@@ -142,24 +142,31 @@ exports.recommended = (req, res) => {
                      FROM pelicula AS p 
                      INNER JOIN genero AS g ON p.genero_id = g.id`;
   const queryParams = [];
+  const queryData = []
   
   if (genre) {
-    queryParams.push(`g.nombre LIKE '%${genre}%' `);
+    queryParams.push(`g.nombre LIKE ? `);
+    queryData.push(genre)
   }
   if (puntuacion) {
-    queryParams.push("p.puntuacion = " + puntuacion);
+    queryParams.push("p.puntuacion = ? " );
+    queryData.push(puntuacion)
   }
   if (anio_inicio) {
-    queryParams.push(" p.anio BETWEEN " + anio_inicio + " AND " + anio_fin);
+    queryParams.push(" p.anio BETWEEN ?  AND ? ");
+    queryData.push(anio_inicio)
+    queryData.push(anio_fin)
   }
 
   if (queryParams.length > 0) {
-    baseSql += " WHERE " + queryParams.pop();
+    baseSql += " WHERE " + queryParams.shift();
     if (queryParams.length > 0) {
       queryParams.map(filter => (baseSql += " AND " + filter));
     }
   }
-  database.query(baseSql, (err, rows) => {
+  console.log("baseSql",baseSql)
+  console.log("queryData",queryData)
+  database.query(baseSql,queryData, (err, rows) => {
     if (err) res.status(500).send("Internal Server Error");
     else {
       res.json({ peliculas: rows });
