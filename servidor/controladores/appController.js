@@ -1,14 +1,14 @@
 const database = require("../lib/conexionbd");
 //Metodo que devuelve las peliculas solicitadas de acuerdo a los filtros
-exports.movies = (req, res) => {
+exports.getMovies = (req, res) => {
   //PARAMETROS
-  var sql = "SELECT * FROM pelicula"; //SQL base para las consultas
-  var sqlCount = "SELECT COUNT(*) as total FROM pelicula"; //SQL base para la cantidad de datos
-  var total = 0; //Total de registros devueltos por la base de datos
-  var offset = 0; //OFFSET para la paginacion
-  var filter = " "; //Filtro de peliculas
-  var order = " "; //Orden que requiere el user
-  var queryParameters = []; //Contenedor de los parametros que llevara la query
+  let sql = "SELECT * FROM pelicula"; //SQL base para las consultas
+  let sqlCount = "SELECT COUNT(*) as total FROM pelicula"; //SQL base para la cantidad de datos
+  let total = 0; //Total de registros devueltos por la base de datos
+  let offset = 0; //OFFSET para la paginacion
+  let filter = " "; //Filtro de peliculas
+  let order = " "; //Orden que requiere el user
+  let queryParameters = []; //Contenedor de los parametros que llevara la query
   const {
     pagina,
     titulo,
@@ -42,13 +42,13 @@ exports.movies = (req, res) => {
   //Se genera el orden que ejecutara la query
   switch (columna_orden) {
     case "titulo":
-      order = " ORDER BY titulo ASC";
+      order = ` ORDER BY titulo ${tipo_orden}`;
       break;
     case "anio":
-      order = " ORDER BY anio DESC";
+      order = ` ORDER BY anio ${tipo_orden} `;
       break;
     case "puntuacion":
-      order = " ORDER BY puntuacion DESC";
+      order = `ORDER BY puntuacion ${tipo_orden}`;
   }
   //se suma a la query base los filtros y el orden
   sql += filter + order;
@@ -59,7 +59,7 @@ exports.movies = (req, res) => {
   //Se toma la cantiad de resultados solicitados de acuerdo a que pagina es requerida
   if (cantidad) {
     if (pagina > 1) {
-      offset += 52 * (pagina - 1);
+      offset += cantidad * (pagina - 1);
     }
     sql += ` LIMIT ${offset},${cantidad} `;
   }
@@ -72,23 +72,24 @@ exports.movies = (req, res) => {
     //res.status(500).send("Internal Server Error");
     else {
       total = rows[0].total;
-    }
-  });
-  //Consulta que retorna los registros a enviar con la cantidad solicitada y su offset correspondiente
-  database.query(sql, (err, rows) => {
-    if (err) {
-      res.status(500).send("Internal Server Error");
-    } else {
-      res.json({ result: "ok", peliculas: rows, total: total });
+      //Consulta que retorna los registros a enviar con la cantidad solicitada y su offset correspondiente
+      database.query(sql, (err, rows) => {
+        if (err) {
+          res.status(500).send("Internal Server Error");
+        } else {
+          res.json({ result: "ok", peliculas: rows, total: total });
+        }
+      });
     }
   });
 };
 
 //Metodo para retornar los generos al frontend
-exports.generos = (req, res) => {
+exports.getGeneros = (req, res) => {
   database.query(`SELECT * FROM genero`, (err, rows) => {
     if (err) res.status(500).send("Internal Server Error");
     else {
+      console.log()
       res.json({ result: "ok", generos: rows });
     }
   });
@@ -121,8 +122,8 @@ exports.getMovie = (req, res) => {
             trama: rows[0].trama,
             nombre: rows[0].genero
           };
-          const actores = [];
-          rows.map(registros => actores.push({ nombre: registros.actor }));
+          
+          const actores = rows.map(registros => ({ nombre: registros.actor }));
           res.json({ pelicula: peli, actores: actores });
         }
       }
